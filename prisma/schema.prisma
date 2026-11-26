@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // switch to "postgresql" when you deploy
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  role      String    @default("TRAVELLER") // TRAVELLER | LOCAL
+  bio       String?
+  createdAt DateTime  @default(now())
+  trips     Trip[]
+  listings  Listing[]
+  requests  Request[]
+}
+
+// A traveller's planned trip. Used for buddy matching + AI itinerary.
+model Trip {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  destination String
+  startDate   DateTime
+  endDate     DateTime
+  budgetPerDay Int?
+  preferences String   @default("[]") // JSON array: ["scenic","low-budget","offbeat","safe","local-interaction"]
+  itinerary   String?  // JSON produced by the AI
+  createdAt   DateTime @default(now())
+}
+
+// Anything a local offers: STAY | FOOD | VEHICLE
+model Listing {
+  id          String   @id @default(cuid())
+  hostId      String
+  host        User     @relation(fields: [hostId], references: [id])
+  type        String
+  title       String
+  description String
+  location    String
+  pricePerUnit Int      // rupees: per night / per plate / per day
+  unit        String    // night | plate | day
+  createdAt   DateTime @default(now())
+  requests    Request[]
+}
+
+// Traveller asks a local for a listing (the "handshake")
+model Request {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  travellerId String
+  traveller  User     @relation(fields: [travellerId], references: [id])
+  fromDate   DateTime
+  toDate     DateTime
+  status     String   @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  createdAt  DateTime @default(now())
+}
